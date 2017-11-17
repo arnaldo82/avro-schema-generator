@@ -39,6 +39,12 @@ public enum AvroTypes {
 		public <T> T apply(AvroTypeStrategy<T> strategy) {
 			return strategy.ENUM();
 		}
+	},
+	ARRAY(Schema.Type.ARRAY) {
+		@Override
+		public <T> T apply(AvroTypeStrategy<T> strategy) {
+			return strategy.ARRAY();
+		}
 	};
 	
 	
@@ -68,6 +74,8 @@ public enum AvroTypes {
         public T RECORD();
         
         public T ENUM();
+        
+        public T ARRAY();
         
     }	
 

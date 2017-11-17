@@ -1,11 +1,11 @@
 package com.avroschema.generator.avroschemagenerator.model;
 
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
-import org.apache.commons.collections4.ListUtils;
 
 
 
@@ -56,6 +56,12 @@ public class AvscBaseTypeGenerator extends AvscTypeGenerator {
 				// TODO Auto-generated method stub
 				return null;
 			}
+
+			@Override
+			public Schema ARRAY() {
+				// TODO Auto-generated method stub
+				return null;
+			}
 			
 		});
 	}
@@ -64,46 +70,22 @@ public class AvscBaseTypeGenerator extends AvscTypeGenerator {
 		return new Builder();
 	}
 	
-	public static class Builder {
+	public static class Builder extends AvscTypeGenerator.Builder<Builder> {
 		AvscBaseTypeGenerator instance = new AvscBaseTypeGenerator();
 		
 		
-		public Builder setName(final String name) {
-			instance.name = name;
-			return this;
-		}
-		
-		public Builder setType(final AvroTypes type) {
-			instance.type = type;
-			return this;
-		}	
-
-		public Builder setDoc(final String doc) {
-			instance.doc = doc;
-			return this;
-		}	
-		
-		public Builder setAliases(final List<String> aliases) {
-			instance.aliases = ListUtils.emptyIfNull(aliases);
-			return this;
-		}	
-		
-		public Builder setDefaultValue(final Object defaultValue) {
-			instance.defaultValue = defaultValue;
-			return this;
-		}
-		
-		public Builder setOptional() {
-			instance.optional = Boolean.TRUE;
-			return this;
-		}
-		
-		public Builder setNullable() {
-			instance.nullable = Boolean.TRUE;
-			return this;
-		}
-
 		public AvscBaseTypeGenerator build() {
+			return (AvscBaseTypeGenerator) super.build();
+		}
+		
+		public Builder addChildren(final List<AvscTypeGenerator> children){
+			getInstance().children = new ArrayList<>();
+			return this;
+		}
+
+
+		@Override
+		protected AvscTypeGenerator getInstance() {
 			return instance;
 		}	
 	}

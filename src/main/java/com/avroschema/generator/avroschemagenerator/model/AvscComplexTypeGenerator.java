@@ -1,15 +1,19 @@
 package com.avroschema.generator.avroschemagenerator.model;
 
+
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.avro.Schema;
-import org.apache.avro.Schema.Field;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.SchemaBuilder.FieldAssembler;
 import org.apache.avro.SchemaBuilder.GenericDefault;
+import org.apache.avro.SchemaBuilder.TypeBuilder;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.Assert;
+
 
 
 public class AvscComplexTypeGenerator extends AvscTypeGenerator {
@@ -56,18 +60,21 @@ public class AvscComplexTypeGenerator extends AvscTypeGenerator {
 			@Override
 			public Schema RECORD() {
 				
-				FieldAssembler<Schema> myFieldsAssembler = SchemaBuilder.builder(namespace)
+				TypeBuilder<Schema> builder = isOptional() 
+						? (TypeBuilder<Schema>) SchemaBuilder.builder(namespace).nullable() 
+						: SchemaBuilder.builder(namespace);
+				aliases = ListUtils.emptyIfNull(aliases);
+				FieldAssembler<Schema> myFieldsAssembler = builder
 						.record(name)
 						.aliases(aliases.toArray(new String[aliases.size()]))
 						.doc(doc)
-						.fields();
-				
+						.fields();				
 				
 				getChildren()
 				.stream()
 				.forEach(child -> {GenericDefault<Schema> genericDefault = myFieldsAssembler
 						.name(child.getName())
-						.aliases(child.getAliases().toArray(new String[child.getAliases().size()]))
+						.aliases(Optional.ofNullable(child.getAliases()).map(list -> list.toArray(new String[list.size()])).orElse(new String[0]))
 						.doc(child.getDoc())
 						.type(child.generate());
 				        
@@ -76,21 +83,29 @@ public class AvscComplexTypeGenerator extends AvscTypeGenerator {
 				        }else {
 				        	genericDefault.noDefault();
 				        }
-				});
-				
+				});				
 				 return myFieldsAssembler.endRecord();
-				
-				// BASIC IMPLEMENTATION WITHOUT ASSEMBLER
-//				List<Field> fields = getChildren()
-//						.stream()
-//						.map(child ->  new Schema.Field(child.getName(), child.generate(), child.getDoc(), null))
-//						.collect(Collectors.toList());
-//				return Schema.createRecord(name, doc, namespace, false, fields);
 			}
 
 			@Override
 			public Schema ENUM() {
-				return null;//SchemaBuilder.enumeration(getName()).symbols(getChildren());
+				return SchemaBuilder
+						.enumeration(getName())
+						.namespace(getNamespace())
+						.doc(getDoc())
+						.aliases(getAliases().toArray(new String[getAliases().size()]))					
+						.symbols(getChildren().stream()
+								.map(AvscTypeGenerator::getName)
+								.collect(Collectors.toList())
+								.toArray(new String[getChildren().size()]));
+			}
+
+			@Override
+			public Schema ARRAY() {
+				return SchemaBuilder.array().items(getChildren().stream()
+						.findAny()
+						.map(child -> child.generate())
+						.orElseThrow(() -> new RuntimeException("Arrays must have only 1 field")));
 			}
 		});
 	}
@@ -100,7 +115,8 @@ public class AvscComplexTypeGenerator extends AvscTypeGenerator {
 		return new Builder();
 	}
 	
-	public static class Builder {
+	public static class Builder extends AvscTypeGenerator.Builder<Builder>{
+		
 		AvscComplexTypeGenerator instance = new AvscComplexTypeGenerator();
 		
 		public Builder setNamespace(final String namespace) {
@@ -108,20 +124,6 @@ public class AvscComplexTypeGenerator extends AvscTypeGenerator {
 			return this;
 		}
 		
-		public Builder setName(final String name) {
-			instance.name = name;
-			return this;
-		}
-
-		public Builder setDoc(final String doc) {
-			instance.doc = doc;
-			return this;
-		}	
-		
-		public Builder setAlias(final List<String> aliases) {
-			instance.aliases = ListUtils.emptyIfNull(aliases);
-			return this;
-		}	
 		
 		public Builder addChildren(final List<AvscTypeGenerator> children){
 			instance.children = ListUtils.emptyIfNull(children);
@@ -132,9 +134,16 @@ public class AvscComplexTypeGenerator extends AvscTypeGenerator {
 			instance.type = type;
 			return this;
 		}	
-
 		
 		public AvscComplexTypeGenerator build() {
+			Assert.state(!ListUtils.emptyIfNull(instance.getChildren()).isEmpty(), "complex types must have at least 1 child");
+			Assert.state(StringUtils.isNotBlank(instance.namespace), "namespace must be valued for complex types");
+			return (AvscComplexTypeGenerator) super.build();
+		}
+
+
+		@Override
+		protected AvscTypeGenerator getInstance() {
 			return instance;
 		}
 		
